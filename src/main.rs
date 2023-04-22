@@ -1,3 +1,5 @@
+use std::{thread, time};
+
 struct Board {
     vec: Vec<Vec<bool>>,
     row: usize,
@@ -10,7 +12,7 @@ impl Board {
     fn show(&self) {
         for y in 0..self.row {
             for x in 0..self.col {
-                print!("{}   ", (self.vec[y][x] as i8));
+                print!("{}  ", (self.vec[y][x] as i8));
             }
             print!("\n");
         }
@@ -42,55 +44,55 @@ impl Board {
         }
     }
 
-    /* Given a set of coordinates, how many alive neighbors does this cell have */
-    fn neighbors(&self, x: usize, y: usize) -> usize {
+    /* Given a set of coordinates, how many alive neighbours does this cell have */
+    fn neighbours(&self, x: usize, y: usize) -> usize {
 
         let check = x <= self.col-1 && y <= self.row-1;
         if check {
 
-            let mut neighbors: usize = 0;
+            let mut neighbours: usize = 0;
 
             //West neighbor
             if x != 0 {
-                if self.vec[y][x-1] {neighbors += 1};
+                if self.vec[y][x-1] {neighbours += 1};
             }
 
             //Northwest neighbor
             if x != 0 && y != 0 {
-                if self.vec[y-1][x-1] {neighbors += 1};
+                if self.vec[y-1][x-1] {neighbours += 1};
             }
 
             //North neighbor
             if y != 0 {
-                if self.vec[y-1][x] {neighbors += 1};
+                if self.vec[y-1][x] {neighbours += 1};
             }
 
             //Northeast neighbor
             if y != 0 && x != self.col-1 {
-                if self.vec[y-1][x+1] {neighbors += 1};
+                if self.vec[y-1][x+1] {neighbours += 1};
             }
 
             //East neighbor
             if x != self.col-1 {
-                if self.vec[y][x+1] {neighbors += 1};
+                if self.vec[y][x+1] {neighbours += 1};
             }
 
             //Southeast neighbor
             if x != self.col-1 && y != self.row-1 {
-                if self.vec[y+1][x+1] {neighbors += 1};
+                if self.vec[y+1][x+1] {neighbours += 1};
             }
 
             //South neighbor
             if y != self.row-1 {
-                if self.vec[y+1][x] {neighbors += 1};
+                if self.vec[y+1][x] {neighbours += 1};
             }
 
             //Southwest neighbor
             if x != 0 && y != self.row-1 {
-                if self.vec[y+1][x-1] {neighbors += 1};
+                if self.vec[y+1][x-1] {neighbours += 1};
             }
 
-            neighbors
+           neighbours 
 
         } else {
             println!("ERROR: Cannot check out of bounds coordinate!");
@@ -101,19 +103,45 @@ impl Board {
 
     /* Given the board's current state at time t, modify 
     the board to what it should look like at time t+1 */
-
-    /*
-    fn update_board(&mut self) {
+    fn update_board(&mut self) -> bool {
 
         //Create a new board
         let mut new: Vec<Vec<bool>> = vec![vec![false; self.col]; self.row];
 
         for y in 0..self.row {
             for x in 0..self.col {
+
+                //Things we need to know about every cell
+                let neighbour_count = self.neighbours(x,y);
+                let alive = self.alive(x,y);
+
+                //Rule 1
+                if alive && (neighbour_count == 2 || neighbour_count == 3) {
+                    new[y][x] = true;
+
+                //Rule 2
+                } else if !alive && neighbour_count == 3 {
+                    new[y][x] = true;
+
+                //In all other cases the cell is just dead
+                } else {
+                    new[y][x] = false
+                }
             }
         }
+
+        //If we reach a game state where there is
+        //no change, the game is over and we can
+        //return false
+        if self.vec == new {
+            false
+        
+        //The general case is that the game is not over
+        } else {
+            self.vec = new;
+            true
+        }
     }
-    */
 }
 
 fn board_init(size: usize) -> Board {
@@ -129,30 +157,31 @@ fn main() {
     //Create a board
     let mut board: Board = board_init(10);
 
-    //See if we can modify it
-    board.set(9,9,true);
-    board.set(0,0,true);
-    board.set(9,0,true);
-    board.set(0,9,true);
+    //Create a "block"
+    board.set(5,5,true);
+    board.set(5,6,true);
+    board.set(6,5,true);
+    board.set(6,6,true);
 
-    board.set(8,8,true);
-    board.set(0,1,true);
-    board.set(8,0,true);
-    board.set(0,8,true);
+    //Create a "blinker"
+    board.set(2,1,true);
+    board.set(2,2,true);
+    board.set(2,3,true);
 
-    //See if neighbors is working properly
-    println!("Neighbors for 9,9: {}", board.neighbors(9,9));
-    println!("Neighbors for 0,0: {}", board.neighbors(0,0));
-    println!("Neighbors for 9,0: {}", board.neighbors(9,0));
-    println!("Neighbors for 0,9: {}", board.neighbors(0,9));
+    let mut counter = 0;
+    loop {
 
+        println!("Counter t={counter}");
+        board.show();
 
-    //See if alive works properly
-    println!("Cell 0,0 is alive {}", board.alive(0,0));
-    println!("Cell 0,8 is alive {}", board.alive(0,8));
-    println!("Cell 5,5 is alive {}", board.alive(5,5));
-    println!("Cell 1,2 is alive {}", board.alive(1,2));
+        //Update the board, and if it's false
+        //break
+        if !board.update_board() {
+            break;
+        }
 
-
-    board.show()
+        //Wait for a moment
+        thread::sleep(time::Duration::from_millis(1000));
+        counter += 1;
+    }
 }
